@@ -73,7 +73,7 @@ def _un_shebang(x):
         return []
     elif any(x.startswith(i) for i in ["/usr/bin", "/usr/local/bin", "/bin"]):
         x = os.path.basename(x)
-    elif x.endswith("python") or x.endswith("python.exe"):
+    elif x.endswith("python") or x.endswith("python3") or x.endswith("python.exe"):
         x = "python"
     if x == "xonsh":
         return ["python", "-m", "xonsh.main"]
