@@ -108,7 +108,8 @@ def get_script_subproc_command(fname, args):
         # Windows can execute various filetypes directly
         # as given in PATHEXT
         _, ext = os.path.splitext(fname)
-        if ext.upper() in XSH.env.get("PATHEXT"):
+        if ext.upper() in XSH.env.get("PATHEXT") and \
+           ext.upper() not in [".PY", ".PYW", ".XSH"]:
             return [fname] + args
     # find interpreter
     with open(fname, "rb") as f:
@@ -128,13 +129,17 @@ def get_script_subproc_command(fname, args):
         for i in interp:
             o.extend(_un_shebang(i))
         interp = o
+    interp_path = xenv.locate_binary(interp[0])
+    if interp_path is None:
+        return None
+    interp[0] = str(pathlib.Path(interp_path).resolve())
     return interp + [fname] + args
 
 
 @xl.lazyobject
 def _REDIR_REGEX():
     name = r"(o(?:ut)?|e(?:rr)?|a(?:ll)?|&?\d?)"
-    return re.compile(f"{name}(>?>|<){name}$")
+    return re.compile("{r}(>?>|<){r}$".format(r=name))
 
 
 @xl.lazyobject
@@ -774,6 +779,7 @@ class SubprocSpec:
             scriptcmd = get_script_subproc_command(self.binary_loc, self.cmd[1:])
             if scriptcmd is not None:
                 self.cmd = scriptcmd
+                self.binary_loc = scriptcmd[0]
         except PermissionError as ex:
             e = "xonsh: subprocess mode: permission denied: {0}"
             raise xt.XonshError(e.format(self.cmd[0])) from ex
