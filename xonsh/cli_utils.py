@@ -208,6 +208,24 @@ def add_args(
             action.help += " (type: %(type)s)"
 
 
+class _HelpAction(ap.Action):
+
+    def __init__(self,
+                 option_strings,
+                 dest=ap.SUPPRESS,
+                 default=ap.SUPPRESS,
+                 help=None):
+        super(_HelpAction, self).__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        parser.print_help()
+
+
 def make_parser(
     func: tp.Union[tp.Callable, str],
     empty_help=False,
@@ -220,7 +238,14 @@ def make_parser(
     if "epilog" not in kwargs:
         if doc.epilog:
             kwargs["epilog"] = doc.epilog
-    parser = ArgParser(**kwargs)
+    parser = ArgParser(**kwargs, exit_on_error=False, add_help=False)
+
+    default_prefix = '-' if '-' in parser.prefix_chars else parser.prefix_chars[0]
+    parser.add_argument(
+        default_prefix+'h', default_prefix*2+'help',
+        action=_HelpAction, default=ap.SUPPRESS,
+        help='show this help message and exit')
+
     if empty_help:
         parser.default_command = "--help"
     return parser
