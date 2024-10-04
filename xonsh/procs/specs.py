@@ -28,6 +28,7 @@ from xonsh.procs.pipelines import (
 from xonsh.procs.posix import PopenThread
 from xonsh.procs.proxies import ProcProxy, ProcProxyThread
 from xonsh.procs.readers import ConsoleParallelReader
+from xonsh.environ import locate_binary
 
 
 @xl.lazyobject
@@ -108,7 +109,8 @@ def get_script_subproc_command(fname, args):
         # Windows can execute various filetypes directly
         # as given in PATHEXT
         _, ext = os.path.splitext(fname)
-        if ext.upper() in XSH.env.get("PATHEXT"):
+        if ext.upper() in XSH.env.get("PATHEXT") and \
+           ext.upper() not in [".PY", ".PYW", ".XSH"]:
             return [fname] + args
     # find interpreter
     with open(fname, "rb") as f:
@@ -128,6 +130,10 @@ def get_script_subproc_command(fname, args):
         for i in interp:
             o.extend(_un_shebang(i))
         interp = o
+    interp_path = locate_binary(interp[0])
+    if interp_path is None:
+        return None
+    interp[0] = str(pathlib.Path(interp_path).resolve())
     return interp + [fname] + args
 
 
@@ -783,6 +789,7 @@ class SubprocSpec:
             scriptcmd = get_script_subproc_command(self.binary_loc, self.cmd[1:])
             if scriptcmd is not None:
                 self.cmd = scriptcmd
+                self.binary_loc = scriptcmd[0]
         except PermissionError as ex:
             e = "xonsh: subprocess mode: permission denied: {0}"
             raise xt.XonshError(e.format(self.cmd[0])) from ex
